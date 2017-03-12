@@ -1,16 +1,38 @@
-import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 import numpy as np
 from netCDF4 import Dataset
 from urllib import urlretrieve
+import tables, os, math, sys
+
+def run2(FILE_NAME):
+    #filename  = "OMI-Aura_L2-OMCLDO2_2007m1017t0009-o17311_v002-2007m1017t172248.he5"
+    swathname = 'ColumnAmountO3'
+    
+    # Open the HDF-file, and offset the root so that path references become shorter
+    hdf5ref = tables.openFile(FILE_NAME, mode="r", rootUEP="/HDFEOS/SWATHS/"+swathname)
+    
+    # get references to the geolocation and data fileds
+    geo = hdf5ref.getNode("/","Geolocation Fields")
+    data = hdf5ref.getNode("/","Data Fields")
+    
+    # read the data
+    latitude = geo.Latitude.read()
+    longitude = geo.Longitude.read()
+    ColumnAmountO3 = data.CloudFraction.read()
+    
+    # close access to the file
+    hdf5ref.close()
+    return latitude,longitude,ColumnAmountO3
 
 def run(FILE_NAME):
     DATAFIELD_NAME = 'ColumnAmountO3'
 
+    print 'FILE_NAME=',FILE_NAME
     nc = Dataset(FILE_NAME)
-    grp = nc.groups['HDFEOS'].groups['SWATHS'].groups['OMI Column Amount O3']
+    #grp = nc.groups['HDFEOS'].groups['SWATHS'].groups['OMI Column Amount O3'] 
+    grp = nc.groups['HDFEOS'].groups['SWATHS'].groups[DATAFIELD_NAME] # DOAS
     var = grp.groups['Data Fields'].variables[DATAFIELD_NAME]
     
     # netCDF4 doesn't quite handle the scaling correctly in this case since
@@ -73,14 +95,19 @@ if __name__ == "__main__":
     # If a certain environment variable is set, look there for the input
     # file, otherwise look in the current directory.
     
-    DirURL = 'http://aura.gesdisc.eosdis.nasa.gov/data/Aura_OMI_Level2/OMTO3.003/2015/275/'
-    fhand = open('list_of_files.txt')
-    stacking = False
+    #fhand = open('list_of_files.txt')
+    fhand = open('list_of_files_DOAS.txt')    
+    #DirURL = 'http://aura.gesdisc.eosdis.nasa.gov/data/Aura_OMI_Level2/OMTO3.003/2015/275/' #
+    DirURL = 'http://aura.gesdisc.eosdis.nasa.gov/data/Aura_OMI_Level2/OMDOAO3.003/2015/275/' #DOAS
+    #DirURL = fhand.readline() # First line to be downloading URL
+    print 'DirURL=',DirURL
+    #stacking = False
     for line in fhand:
         c = line.split()
         try:
             if c[0] == '[':
                 hdffile = c[2]
+                print 'hdffile=',hdffile
                 aa = urlretrieve(DirURL+hdffile,hdffile)
                 print aa    
             #    while dl:
@@ -103,5 +130,13 @@ if __name__ == "__main__":
         #    stacking = True
         #else:
         #    ts = np.vstack((ts,run(hdffile)))
+        
+        # --- Do some simple statistics ---
+        print 'Total number of recorded values:',ts.shape[0]
+        print 'Number of -ve values:',np.sum(ts[:,3]<0)
+        print 'Number of values<100:',np.sum(ts[:,3]<100)
+        print 'Number of values>900:',np.sum(ts[:,3]>900)
+        
     print 'eventually, shape of ts=',ts.shape    
-    np.savetxt("Oct2_2015_ColumnAmountO3.txt", ts, fmt='%10.5f , %10.5f , %10.5f , %10.5f')
+    #np.savetxt("Oct2_2015_ColumnAmountO3.txt", ts, fmt='%10.5f , %10.5f , %10.5f , %10.5f')
+    np.savetxt("Oct2_2015_DOAS_ColumnAmountO3.txt", ts, fmt='%10.5f , %10.5f , %10.5f , %10.5f')
