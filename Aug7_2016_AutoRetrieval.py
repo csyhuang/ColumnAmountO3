@@ -6,7 +6,7 @@ import numpy as np
 from netCDF4 import Dataset
 import urllib
 import re
-import OMI_L2_sample_code_O3Test
+from OMI_L2_OMNO2_ColumnAmountO3_SWATHS import run
 
 DirURL = 'http://aura.gesdisc.eosdis.nasa.gov/data/Aura_OMI_Level2/OMDOAO3.003/2015/275/' #DOAS
 
@@ -20,7 +20,7 @@ for i in np.arange(0,len(links),4):
    
     # convert hdffile to .txt
     #ts2 = OMI_L2_OMNO2_ColumnAmountO3_SWATHS.run(hdffile)
-    OMI_L2_sample_code_O3Test.run(hdffile)
+    run(hdffile)
     #try:
     #    ts = np.vstack((ts,ts2))
     #except:
